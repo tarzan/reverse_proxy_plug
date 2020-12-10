@@ -45,7 +45,7 @@ defmodule ReverseProxyPlug do
     upstream_parts =
       opts
       |> Keyword.get(:upstream, "")
-      |> get_applied_fn()
+      |> get_applied_fn(conn)
       |> upstream_parts()
 
     opts =
@@ -56,29 +56,20 @@ defmodule ReverseProxyPlug do
     conn |> request(body, opts) |> response(conn, opts)
   end
 
-  defp get_string(upstream, default \\ "")
+  defp get_string(upstream) when is_binary(upstream), do: upstream
+  defp get_string(_), do: ""
 
-  defp get_string(upstream, _) when is_binary(upstream) do
-    upstream
-  end
-
-  defp get_string(_, default) do
-    default
-  end
-
-  defp get_applied_fn(upstream, default \\ "")
-
-  defp get_applied_fn(upstream, _) when is_function(upstream) do
+  defp get_applied_fn(upstream, _) when is_function(upstream, 0) do
     upstream.()
   end
 
-  defp get_applied_fn(_, default) do
-    default
+  defp get_applied_fn(upstream, conn) when is_function(upstream, 1) do
+    upstream.(conn)
   end
 
-  defp upstream_parts("" = _upstream) do
-    []
-  end
+  defp get_applied_fn(_, _), do: ""
+
+  defp upstream_parts("" = _upstream), do: []
 
   defp upstream_parts(upstream) do
     upstream
